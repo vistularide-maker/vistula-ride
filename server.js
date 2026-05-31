@@ -233,6 +233,92 @@ function availableBikes(bookings, candidate) {
   return Math.max(0, fleetSize - reserved);
 }
 
+function formatHour(hour) {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function reservationEmailHtml(booking) {
+  const mapUrl = "https://www.google.com/maps/dir//Na+Wi%C5%9Blanej+Skarpie,+Widokowa+12,+87-125+Stajenczynki";
+  return `
+    <div style="font-family:Arial,sans-serif;color:#071524;line-height:1.5">
+      <h1 style="margin:0 0 16px">Potwierdzenie rezerwacji Vistula Ride</h1>
+      <p>Dzień dobry ${escapeHtml(booking.customer.name)},</p>
+      <p>Przyjęliśmy Twoją rezerwację roweru elektrycznego.</p>
+      <table style="border-collapse:collapse;margin:20px 0;width:100%;max-width:560px">
+        <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Data</strong></td><td style="padding:8px;border:1px solid #d8dde5">${escapeHtml(booking.date)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Godzina</strong></td><td style="padding:8px;border:1px solid #d8dde5">${formatHour(booking.start)}-${formatHour(booking.end)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Pakiet</strong></td><td style="padding:8px;border:1px solid #d8dde5">${escapeHtml(booking.package)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Płatność online</strong></td><td style="padding:8px;border:1px solid #d8dde5">${escapeHtml(booking.price)} zł</td></tr>
+        <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Kaucja zwrotna</strong></td><td style="padding:8px;border:1px solid #d8dde5">300 zł gotówką przy odbiorze</td></tr>
+      </table>
+      <p><strong>Odbiór:</strong><br>Na Wiślanej Skarpie, Widokowa 12, 87-125 Stajenczynki</p>
+      <p><a href="${mapUrl}" style="color:#9e670c;font-weight:bold">Wyznacz trasę w Google Maps</a></p>
+      <p>Do zobaczenia na trasie,<br>Vistula Ride</p>
+    </div>
+  `;
+}
+
+async function sendEmail({ to, subject, html }) {
+  if (!process.env.RESEND_API_KEY || !process.env.MAIL_FROM) {
+    return;
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: process.env.MAIL_FROM,
+      to,
+      subject,
+      html
+    })
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Resend error ${response.status}: ${body}`);
+  }
+}
+
+async function sendReservationEmails(booking) {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const customerSubject = `Rezerwacja Vistula Ride: ${booking.date}, ${formatHour(booking.start)}`;
+  const adminSubject = `Nowa rezerwacja: ${booking.date}, ${formatHour(booking.start)}`;
+
+  await Promise.all([
+    sendEmail({
+      to: booking.customer.email,
+      subject: customerSubject,
+      html: reservationEmailHtml(booking)
+    }),
+    adminEmail
+      ? sendEmail({
+          to: adminEmail,
+          subject: adminSubject,
+          html: `
+            ${reservationEmailHtml(booking)}
+            <hr>
+            <p><strong>Klient:</strong> ${escapeHtml(booking.customer.name)}</p>
+            <p><strong>Telefon:</strong> ${escapeHtml(booking.customer.phone)}</p>
+            <p><strong>E-mail:</strong> ${escapeHtml(booking.customer.email)}</p>
+          `
+        })
+      : Promise.resolve()
+  ]);
+}
+
 async function readJson(req) {
   const chunks = [];
   for await (const chunk of req) {
@@ -383,6 +469,9 @@ const server = http.createServer(async (req, res) => {
 
       const nextBookings = [...bookings, candidate];
       await writeBookings(nextBookings);
+      sendReservationEmails(candidate).catch((error) => {
+        console.warn("Nie udało się wysłać maila rezerwacji:", error.message);
+      });
       sendJson(res, 201, { booking: candidate, bookings: nextBookings });
       return;
     }
