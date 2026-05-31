@@ -251,6 +251,6 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Vistula Ride działa pod adresem http://127.0.0.1:${port}`);
+server.listen(port, "0.0.0.0", () => {
+  console.log(`Vistula Ride działa na porcie ${port}`);
 });
