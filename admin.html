@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Panel admina | Vistula Ride</title>
+    <meta name="robots" content="noindex">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="admin-page">
+    <main class="admin-shell">
+      <section class="admin-login" id="loginView">
+        <img src="assets/vistula-ride-logo-light.png" alt="Vistula Ride">
+        <h1>Panel admina</h1>
+        <form id="adminLoginForm">
+          <label>
+            <span>Login</span>
+            <input type="text" name="login" autocomplete="username" required>
+          </label>
+          <label>
+            <span>Hasło</span>
+            <input type="password" name="password" autocomplete="current-password" required>
+          </label>
+          <button class="button button-primary" type="submit">
+            <span>Zaloguj</span>
+          </button>
+          <p class="form-message" id="loginMessage" role="status"></p>
+        </form>
+      </section>
+
+      <section class="admin-dashboard" id="dashboardView" hidden>
+        <header class="admin-topbar">
+          <div>
+            <p class="eyebrow">Vistula Ride</p>
+            <h1>Rezerwacje</h1>
+          </div>
+          <button class="button button-ghost" id="logoutButton" type="button">
+            <span>Wyloguj</span>
+          </button>
+        </header>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Termin</th>
+                <th>Pakiet</th>
+                <th>Klient</th>
+                <th>Kontakt</th>
+                <th>Dokument</th>
+                <th>Utworzono</th>
+                <th>Akcje</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsTable"></tbody>
+          </table>
+        </div>
+        <p class="form-message" id="adminMessage" role="status"></p>
+      </section>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>
