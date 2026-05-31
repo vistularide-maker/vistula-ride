@@ -246,6 +246,22 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function getMailFrom() {
+  const from = process.env.MAIL_FROM || "";
+
+  if (!from || from.includes("<") || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from)) {
+    return from;
+  }
+
+  const emailMatch = from.match(/([^\s@]+@[^\s@]+\.[^\s@]+)$/);
+  if (!emailMatch) {
+    return from;
+  }
+
+  const name = from.slice(0, emailMatch.index).trim();
+  return name ? `${name} <${emailMatch[1]}>` : emailMatch[1];
+}
+
 function reservationEmailHtml(booking) {
   const mapUrl = "https://www.google.com/maps/dir//Na+Wi%C5%9Blanej+Skarpie,+Widokowa+12,+87-125+Stajenczynki";
   return `
@@ -268,7 +284,9 @@ function reservationEmailHtml(booking) {
 }
 
 async function sendEmail({ to, subject, html }) {
-  if (!process.env.RESEND_API_KEY || !process.env.MAIL_FROM) {
+  const from = getMailFrom();
+
+  if (!process.env.RESEND_API_KEY || !from) {
     return;
   }
 
@@ -279,7 +297,7 @@ async function sendEmail({ to, subject, html }) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      from: process.env.MAIL_FROM,
+      from,
       to,
       subject,
       html
@@ -297,26 +315,38 @@ async function sendReservationEmails(booking) {
   const customerSubject = `Rezerwacja Vistula Ride: ${booking.date}, ${formatHour(booking.start)}`;
   const adminSubject = `Nowa rezerwacja: ${booking.date}, ${formatHour(booking.start)}`;
 
-  await Promise.all([
-    sendEmail({
+  const messages = [
+    {
+      label: `klient ${booking.customer.email}`,
       to: booking.customer.email,
       subject: customerSubject,
       html: reservationEmailHtml(booking)
-    }),
-    adminEmail
-      ? sendEmail({
-          to: adminEmail,
-          subject: adminSubject,
-          html: `
-            ${reservationEmailHtml(booking)}
-            <hr>
-            <p><strong>Klient:</strong> ${escapeHtml(booking.customer.name)}</p>
-            <p><strong>Telefon:</strong> ${escapeHtml(booking.customer.phone)}</p>
-            <p><strong>E-mail:</strong> ${escapeHtml(booking.customer.email)}</p>
-          `
-        })
-      : Promise.resolve()
-  ]);
+    }
+  ];
+
+  if (adminEmail) {
+    messages.push({
+      label: `admin ${adminEmail}`,
+      to: adminEmail,
+      subject: adminSubject,
+      html: `
+        ${reservationEmailHtml(booking)}
+        <hr>
+        <p><strong>Klient:</strong> ${escapeHtml(booking.customer.name)}</p>
+        <p><strong>Telefon:</strong> ${escapeHtml(booking.customer.phone)}</p>
+        <p><strong>E-mail:</strong> ${escapeHtml(booking.customer.email)}</p>
+      `
+    });
+  }
+
+  const results = await Promise.allSettled(messages.map((message) => sendEmail(message)));
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      console.log(`Wysłano mail rezerwacji: ${messages[index].label}`);
+    } else {
+      console.warn(`Nie udało się wysłać maila rezerwacji: ${messages[index].label}:`, result.reason.message);
+    }
+  });
 }
 
 async function readJson(req) {
@@ -648,6 +678,13 @@ initDatabase()
     server.listen(port, "0.0.0.0", () => {
       const storage = dbPool ? "Postgres" : "bookings.json";
       console.log(`Vistula Ride działa na porcie ${port}. Zapis: ${storage}`);
+      console.log(
+        `E-mail: ${
+          process.env.RESEND_API_KEY && getMailFrom()
+            ? `skonfigurowany (${getMailFrom()})`
+            : "nie skonfigurowany"
+        }`
+      );
     });
   })
   .catch((error) => {
