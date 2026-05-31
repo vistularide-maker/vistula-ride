@@ -12,6 +12,17 @@ function statusLabel(status) {
   return status === "cancelled" ? "Anulowana" : "Aktywna";
 }
 
+function paymentLabel(status) {
+  const labels = {
+    paid: "Opłacone",
+    pending: "Oczekuje",
+    failed: "Nieudane",
+    refunded: "Zwrot"
+  };
+
+  return labels[status] || "Oczekuje";
+}
+
 function formatHour(hour) {
   return `${String(hour).padStart(2, "0")}:00`;
 }
@@ -35,7 +46,7 @@ function documentLink(booking) {
 
 function renderBookings(bookings) {
   if (!bookings.length) {
-    bookingsTable.innerHTML = '<tr><td colspan="8">Brak rezerwacji.</td></tr>';
+    bookingsTable.innerHTML = '<tr><td colspan="9">Brak rezerwacji.</td></tr>';
     return;
   }
 
@@ -46,6 +57,7 @@ function renderBookings(bookings) {
       return `
         <tr class="${cancelled ? "is-cancelled" : ""}">
           <td><span class="admin-status">${statusLabel(booking.status)}</span></td>
+          <td><span class="admin-payment ${booking.paymentStatus === "paid" ? "is-paid" : ""}">${paymentLabel(booking.paymentStatus)}</span></td>
           <td>${escapeHtml(booking.date)}<br>${formatHour(booking.start)}-${formatHour(booking.end)}</td>
           <td>${escapeHtml(booking.package)}<br>${escapeHtml(booking.price || "")} zł</td>
           <td>${escapeHtml(booking.customer?.name || "-")}</td>
@@ -53,6 +65,9 @@ function renderBookings(bookings) {
           <td>${documentLink(booking)}</td>
           <td>${escapeHtml(new Date(booking.createdAt).toLocaleString("pl-PL"))}</td>
           <td>
+            <button class="admin-paid" data-id="${escapeHtml(booking.id)}" type="button" ${cancelled || booking.paymentStatus === "paid" ? "disabled" : ""}>
+              Opłacone
+            </button>
             <button class="admin-cancel" data-id="${escapeHtml(booking.id)}" type="button" ${cancelled ? "disabled" : ""}>
               Anuluj
             </button>
@@ -148,6 +163,23 @@ logoutButton.addEventListener("click", async () => {
 });
 
 bookingsTable.addEventListener("click", async (event) => {
+  const paidButton = event.target.closest(".admin-paid");
+  if (paidButton) {
+    const response = await fetch(`/api/admin/bookings/${encodeURIComponent(paidButton.dataset.id)}/paid`, {
+      method: "POST"
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      adminMessage.textContent = payload.message || "Nie udało się oznaczyć płatności.";
+      return;
+    }
+
+    adminMessage.textContent = "Rezerwacja oznaczona jako opłacona.";
+    renderBookings(payload.bookings);
+    return;
+  }
+
   const button = event.target.closest(".admin-cancel");
   if (!button) {
     return;

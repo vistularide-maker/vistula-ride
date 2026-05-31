@@ -196,6 +196,12 @@ svg {
   margin-bottom: 24px;
 }
 
+.admin-section-title {
+  margin: 28px 0 14px;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
 .admin-table {
   width: 100%;
   min-width: 980px;
@@ -232,6 +238,21 @@ svg {
   font-weight: 900;
 }
 
+.admin-payment {
+  display: inline-flex;
+  border-radius: 999px;
+  background: rgba(211, 145, 31, 0.16);
+  color: var(--gold-dark);
+  padding: 5px 9px;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.admin-payment.is-paid {
+  background: rgba(29, 107, 65, 0.12);
+  color: #1d6b41;
+}
+
 .is-cancelled {
   color: var(--muted);
 }
@@ -252,7 +273,21 @@ svg {
   cursor: pointer;
 }
 
-.admin-cancel:disabled {
+.admin-paid {
+  display: block;
+  margin-bottom: 8px;
+  border: 1px solid #1d6b41;
+  border-radius: 6px;
+  background: #fff;
+  color: #1d6b41;
+  padding: 9px 12px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-cancel:disabled,
+.admin-paid:disabled {
   cursor: not-allowed;
   opacity: 0.48;
 }

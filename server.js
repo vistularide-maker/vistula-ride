@@ -520,6 +520,34 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    const paidMatch = req.url.match(/^\/api\/admin\/bookings\/([^/]+)\/paid$/);
+    if (paidMatch && req.method === "POST") {
+      if (!requireAdmin(req, res)) {
+        return;
+      }
+
+      const bookings = await readBookings();
+      const id = decodeURIComponent(paidMatch[1]);
+      const nextBookings = bookings.map((booking) =>
+        booking.id === id
+          ? {
+              ...booking,
+              paymentStatus: "paid",
+              paidAt: new Date().toISOString()
+            }
+          : booking
+      );
+
+      if (!bookings.some((booking) => booking.id === id)) {
+        sendJson(res, 404, { message: "Nie znaleziono rezerwacji." });
+        return;
+      }
+
+      await writeBookings(nextBookings);
+      sendJson(res, 200, { ok: true, bookings: nextBookings });
+      return;
+    }
+
     await serveStatic(req, res);
   } catch {
     sendJson(res, 500, { message: "Wystąpił błąd serwera." });
