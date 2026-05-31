@@ -237,6 +237,18 @@ function formatHour(hour) {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
+function isValidBookingWindow(booking) {
+  const allowedDurations = [1, 3, 11];
+  const duration = Number(booking.end) - Number(booking.start);
+
+  return (
+    Number(booking.start) >= 9 &&
+    Number(booking.end) <= 20 &&
+    allowedDurations.includes(duration) &&
+    (booking.package !== "Cały dzień" || (Number(booking.start) === 9 && Number(booking.end) === 20))
+  );
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -486,7 +498,8 @@ const server = http.createServer(async (req, res) => {
         candidate.bikes > fleetSize ||
         !candidate.customer.name ||
         !candidate.customer.phone ||
-        !candidate.customer.email
+        !candidate.customer.email ||
+        !isValidBookingWindow(candidate)
       ) {
         sendJson(res, 400, { message: "Nieprawidłowe dane rezerwacji." });
         return;
