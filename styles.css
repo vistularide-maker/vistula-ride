@@ -39,7 +39,7 @@ svg {
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.9;
+  stroke-width: 0.95;
 }
 
 .site-header {
