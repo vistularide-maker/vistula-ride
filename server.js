@@ -10,6 +10,7 @@ const fleetSize = 4;
 const adminUser = process.env.ADMIN_USER || "admin";
 const adminPassword = process.env.ADMIN_PASSWORD || "vistula2026";
 const adminSession = process.env.ADMIN_SESSION || randomUUID();
+let dbPool = null;
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -23,6 +24,32 @@ const types = {
 };
 
 async function readBookings() {
+  if (dbPool) {
+    const result = await dbPool.query(`
+      SELECT id, date, start_hour, end_hour, bikes, package, price, payment_provider,
+             payment_status, status, customer, document, created_at, cancelled_at
+      FROM bookings
+      ORDER BY created_at DESC
+    `);
+
+    return result.rows.map((booking) => ({
+      id: booking.id,
+      date: booking.date,
+      start: Number(booking.start_hour),
+      end: Number(booking.end_hour),
+      bikes: Number(booking.bikes),
+      package: booking.package,
+      price: Number(booking.price),
+      paymentProvider: booking.payment_provider,
+      paymentStatus: booking.payment_status,
+      status: booking.status,
+      customer: booking.customer,
+      document: booking.document,
+      createdAt: booking.created_at,
+      cancelledAt: booking.cancelled_at
+    }));
+  }
+
   try {
     return JSON.parse(await fs.readFile(bookingsFile, "utf8"));
   } catch {
@@ -31,7 +58,82 @@ async function readBookings() {
 }
 
 async function writeBookings(bookings) {
+  if (dbPool) {
+    const client = await dbPool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("DELETE FROM bookings");
+
+      for (const booking of bookings) {
+        await client.query(
+          `
+            INSERT INTO bookings (
+              id, date, start_hour, end_hour, bikes, package, price, payment_provider,
+              payment_status, status, customer, document, created_at, cancelled_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13, $14)
+          `,
+          [
+            booking.id,
+            booking.date,
+            booking.start,
+            booking.end,
+            booking.bikes,
+            booking.package,
+            booking.price || 0,
+            booking.paymentProvider || "stripe",
+            booking.paymentStatus || "pending",
+            booking.status || "active",
+            JSON.stringify(booking.customer || {}),
+            JSON.stringify(booking.document || null),
+            booking.createdAt || new Date().toISOString(),
+            booking.cancelledAt || null
+          ]
+        );
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+    return;
+  }
+
   await fs.writeFile(bookingsFile, JSON.stringify(bookings, null, 2));
+}
+
+async function initDatabase() {
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  const { Pool } = require("pg");
+  dbPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined
+  });
+
+  await dbPool.query(`
+    CREATE TABLE IF NOT EXISTS bookings (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      start_hour INTEGER NOT NULL,
+      end_hour INTEGER NOT NULL,
+      bikes INTEGER NOT NULL DEFAULT 1,
+      package TEXT NOT NULL,
+      price INTEGER NOT NULL DEFAULT 0,
+      payment_provider TEXT NOT NULL DEFAULT 'stripe',
+      payment_status TEXT NOT NULL DEFAULT 'pending',
+      status TEXT NOT NULL DEFAULT 'active',
+      customer JSONB NOT NULL DEFAULT '{}'::jsonb,
+      document JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      cancelled_at TIMESTAMPTZ
+    )
+  `);
 }
 
 function overlaps(first, second) {
@@ -251,6 +353,14 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(port, "0.0.0.0", () => {
-  console.log(`Vistula Ride działa na porcie ${port}`);
-});
+initDatabase()
+  .then(() => {
+    server.listen(port, "0.0.0.0", () => {
+      const storage = dbPool ? "Postgres" : "bookings.json";
+      console.log(`Vistula Ride działa na porcie ${port}. Zapis: ${storage}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Nie udało się uruchomić bazy danych:", error);
+    process.exit(1);
+  });
