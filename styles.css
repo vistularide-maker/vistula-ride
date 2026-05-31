@@ -927,6 +927,14 @@ a:focus-visible {
     justify-self: center;
   }
 
+  .main-nav {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: min(100%, 620px);
+    gap: 0;
+    text-align: center;
+  }
+
   .hero {
     min-height: auto;
   }
@@ -971,9 +979,6 @@ a:focus-visible {
   }
 
   .main-nav {
-    width: 100%;
-    justify-content: space-between;
-    gap: 14px;
     font-size: 0.74rem;
   }
 
