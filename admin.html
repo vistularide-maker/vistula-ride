@@ -39,6 +39,75 @@
           </button>
         </header>
 
+        <section class="admin-card">
+          <h2>Blokada terminu</h2>
+          <form class="admin-block-form" id="blockForm">
+            <label>
+              <span>Data</span>
+              <input type="date" name="date" required>
+            </label>
+            <label>
+              <span>Od</span>
+              <select name="start" required>
+                <option value="">Wybierz</option>
+                <option value="9">09:00</option>
+                <option value="10">10:00</option>
+                <option value="11">11:00</option>
+                <option value="12">12:00</option>
+                <option value="13">13:00</option>
+                <option value="14">14:00</option>
+                <option value="15">15:00</option>
+                <option value="16">16:00</option>
+                <option value="17">17:00</option>
+              </select>
+            </label>
+            <label>
+              <span>Do</span>
+              <select name="end" required>
+                <option value="">Wybierz</option>
+                <option value="10">10:00</option>
+                <option value="11">11:00</option>
+                <option value="12">12:00</option>
+                <option value="13">13:00</option>
+                <option value="14">14:00</option>
+                <option value="15">15:00</option>
+                <option value="16">16:00</option>
+                <option value="17">17:00</option>
+                <option value="18">18:00</option>
+                <option value="19">19:00</option>
+                <option value="20">20:00</option>
+              </select>
+            </label>
+            <label>
+              <span>Liczba rowerów</span>
+              <input type="number" name="bikes" value="1" min="1" max="4" required>
+            </label>
+            <label>
+              <span>Powód</span>
+              <input type="text" name="reason" placeholder="Np. serwis, rezerwacja telefoniczna">
+            </label>
+            <button class="button button-primary" type="submit">
+              <span>Zablokuj</span>
+            </button>
+          </form>
+        </section>
+
+        <div class="admin-table-wrap admin-blocks-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Termin</th>
+                <th>Rowerów</th>
+                <th>Powód</th>
+                <th>Utworzono</th>
+                <th>Akcje</th>
+              </tr>
+            </thead>
+            <tbody id="blocksTable"></tbody>
+          </table>
+        </div>
+
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>

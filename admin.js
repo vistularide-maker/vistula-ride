@@ -4,6 +4,8 @@ const loginForm = document.querySelector("#adminLoginForm");
 const loginMessage = document.querySelector("#loginMessage");
 const adminMessage = document.querySelector("#adminMessage");
 const bookingsTable = document.querySelector("#bookingsTable");
+const blocksTable = document.querySelector("#blocksTable");
+const blockForm = document.querySelector("#blockForm");
 const logoutButton = document.querySelector("#logoutButton");
 
 function statusLabel(status) {
@@ -61,6 +63,34 @@ function renderBookings(bookings) {
     .join("");
 }
 
+function renderBlocks(blocks) {
+  if (!blocks.length) {
+    blocksTable.innerHTML = '<tr><td colspan="6">Brak blokad.</td></tr>';
+    return;
+  }
+
+  blocksTable.innerHTML = blocks
+    .sort((a, b) => `${b.date} ${b.start}`.localeCompare(`${a.date} ${a.start}`))
+    .map((block) => {
+      const cancelled = block.status === "cancelled";
+      return `
+        <tr class="${cancelled ? "is-cancelled" : ""}">
+          <td><span class="admin-status">${statusLabel(block.status)}</span></td>
+          <td>${escapeHtml(block.date)}<br>${formatHour(block.start)}-${formatHour(block.end)}</td>
+          <td>${escapeHtml(block.bikes)}</td>
+          <td>${escapeHtml(block.reason || "-")}</td>
+          <td>${escapeHtml(new Date(block.createdAt).toLocaleString("pl-PL"))}</td>
+          <td>
+            <button class="admin-cancel admin-block-cancel" data-id="${escapeHtml(block.id)}" type="button" ${cancelled ? "disabled" : ""}>
+              Usuń blokadę
+            </button>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
 async function loadBookings() {
   const response = await fetch("/api/admin/bookings");
   if (response.status === 401) {
@@ -73,6 +103,17 @@ async function loadBookings() {
   loginView.hidden = true;
   dashboardView.hidden = false;
   renderBookings(bookings);
+}
+
+async function loadBlocks() {
+  const response = await fetch("/api/admin/blocks");
+  if (response.status === 401) {
+    loginView.hidden = false;
+    dashboardView.hidden = true;
+    return;
+  }
+
+  renderBlocks(await response.json());
 }
 
 loginForm.addEventListener("submit", async (event) => {
@@ -97,6 +138,7 @@ loginForm.addEventListener("submit", async (event) => {
 
   loginForm.reset();
   await loadBookings();
+  await loadBlocks();
 });
 
 logoutButton.addEventListener("click", async () => {
@@ -130,4 +172,57 @@ bookingsTable.addEventListener("click", async (event) => {
   renderBookings(payload.bookings);
 });
 
-loadBookings();
+blockForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  adminMessage.textContent = "";
+
+  const data = new FormData(blockForm);
+  const response = await fetch("/api/admin/blocks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      date: data.get("date"),
+      start: Number(data.get("start")),
+      end: Number(data.get("end")),
+      bikes: Number(data.get("bikes")),
+      reason: data.get("reason")
+    })
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    adminMessage.textContent = payload.message || "Nie udało się dodać blokady.";
+    return;
+  }
+
+  blockForm.reset();
+  adminMessage.textContent = "Blokada została dodana.";
+  renderBlocks(payload.blocks);
+});
+
+blocksTable.addEventListener("click", async (event) => {
+  const button = event.target.closest(".admin-block-cancel");
+  if (!button) {
+    return;
+  }
+
+  const confirmed = window.confirm("Usunąć tę blokadę?");
+  if (!confirmed) {
+    return;
+  }
+
+  const response = await fetch(`/api/admin/blocks/${encodeURIComponent(button.dataset.id)}/cancel`, {
+    method: "POST"
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    adminMessage.textContent = payload.message || "Nie udało się usunąć blokady.";
+    return;
+  }
+
+  adminMessage.textContent = "Blokada została usunięta.";
+  renderBlocks(payload.blocks);
+});
+
+loadBookings().then(loadBlocks);

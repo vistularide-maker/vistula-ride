@@ -168,6 +168,34 @@ svg {
   background: var(--white);
 }
 
+.admin-card {
+  margin-bottom: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  padding: 20px;
+}
+
+.admin-card h2 {
+  margin: 0 0 16px;
+  text-transform: uppercase;
+}
+
+.admin-block-form {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.admin-block-form .button {
+  width: 100%;
+}
+
+.admin-blocks-wrap {
+  margin-bottom: 24px;
+}
+
 .admin-table {
   width: 100%;
   min-width: 980px;
@@ -980,6 +1008,18 @@ a:focus-visible {
 
   .main-nav {
     font-size: 0.74rem;
+  }
+
+  .admin-shell {
+    padding: 18px;
+  }
+
+  .admin-topbar {
+    display: grid;
+  }
+
+  .admin-block-form {
+    grid-template-columns: 1fr;
   }
 
   .hero-bg {

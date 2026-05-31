@@ -5,6 +5,7 @@ const { randomUUID } = require("crypto");
 
 const root = __dirname;
 const bookingsFile = path.join(root, "bookings.json");
+const blocksFile = path.join(root, "blocks.json");
 const port = Number(process.env.PORT || 4173);
 const fleetSize = 4;
 const adminUser = process.env.ADMIN_USER || "admin";
@@ -105,6 +106,74 @@ async function writeBookings(bookings) {
   await fs.writeFile(bookingsFile, JSON.stringify(bookings, null, 2));
 }
 
+async function readBlocks() {
+  if (dbPool) {
+    const result = await dbPool.query(`
+      SELECT id, date, start_hour, end_hour, bikes, reason, status, created_at, cancelled_at
+      FROM blocks
+      ORDER BY created_at DESC
+    `);
+
+    return result.rows.map((block) => ({
+      id: block.id,
+      date: block.date,
+      start: Number(block.start_hour),
+      end: Number(block.end_hour),
+      bikes: Number(block.bikes),
+      reason: block.reason,
+      status: block.status,
+      createdAt: block.created_at,
+      cancelledAt: block.cancelled_at
+    }));
+  }
+
+  try {
+    return JSON.parse(await fs.readFile(blocksFile, "utf8"));
+  } catch {
+    return [];
+  }
+}
+
+async function writeBlocks(blocks) {
+  if (dbPool) {
+    const client = await dbPool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("DELETE FROM blocks");
+
+      for (const block of blocks) {
+        await client.query(
+          `
+            INSERT INTO blocks (id, date, start_hour, end_hour, bikes, reason, status, created_at, cancelled_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          `,
+          [
+            block.id,
+            block.date,
+            block.start,
+            block.end,
+            block.bikes,
+            block.reason || "",
+            block.status || "active",
+            block.createdAt || new Date().toISOString(),
+            block.cancelledAt || null
+          ]
+        );
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+    return;
+  }
+
+  await fs.writeFile(blocksFile, JSON.stringify(blocks, null, 2));
+}
+
 async function initDatabase() {
   if (!process.env.DATABASE_URL) {
     return;
@@ -130,6 +199,20 @@ async function initDatabase() {
       status TEXT NOT NULL DEFAULT 'active',
       customer JSONB NOT NULL DEFAULT '{}'::jsonb,
       document JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      cancelled_at TIMESTAMPTZ
+    )
+  `);
+
+  await dbPool.query(`
+    CREATE TABLE IF NOT EXISTS blocks (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      start_hour INTEGER NOT NULL,
+      end_hour INTEGER NOT NULL,
+      bikes INTEGER NOT NULL DEFAULT 1,
+      reason TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'active',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       cancelled_at TIMESTAMPTZ
     )
@@ -172,6 +255,19 @@ function publicBooking(booking) {
     bikes: booking.bikes,
     package: booking.package,
     status: booking.status || "active"
+  };
+}
+
+function publicBlock(block) {
+  return {
+    id: block.id,
+    date: block.date,
+    start: block.start,
+    end: block.end,
+    bikes: block.bikes,
+    package: "Blokada admina",
+    status: block.status || "active",
+    type: "block"
   };
 }
 
@@ -226,13 +322,18 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.url === "/api/bookings" && req.method === "GET") {
       const bookings = await readBookings();
-      sendJson(res, 200, bookings.filter((booking) => booking.status !== "cancelled").map(publicBooking));
+      const blocks = await readBlocks();
+      sendJson(res, 200, [
+        ...bookings.filter((booking) => booking.status !== "cancelled").map(publicBooking),
+        ...blocks.filter((block) => block.status !== "cancelled").map(publicBlock)
+      ]);
       return;
     }
 
     if (req.url === "/api/bookings" && req.method === "POST") {
       const booking = await readJson(req);
       const bookings = await readBookings();
+      const blocks = await readBlocks();
       const candidate = {
         id: randomUUID(),
         date: String(booking.date || ""),
@@ -275,7 +376,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      if (availableBikes(bookings, candidate) < candidate.bikes) {
+      if (availableBikes([...bookings, ...blocks], candidate) < candidate.bikes) {
         sendJson(res, 409, { message: "Brak wystarczającej liczby rowerów w wybranym terminie." });
         return;
       }
@@ -316,6 +417,78 @@ const server = http.createServer(async (req, res) => {
       }
 
       sendJson(res, 200, await readBookings());
+      return;
+    }
+
+    if (req.url === "/api/admin/blocks" && req.method === "GET") {
+      if (!requireAdmin(req, res)) {
+        return;
+      }
+
+      sendJson(res, 200, await readBlocks());
+      return;
+    }
+
+    if (req.url === "/api/admin/blocks" && req.method === "POST") {
+      if (!requireAdmin(req, res)) {
+        return;
+      }
+
+      const payload = await readJson(req);
+      const block = {
+        id: randomUUID(),
+        date: String(payload.date || ""),
+        start: Number(payload.start),
+        end: Number(payload.end),
+        bikes: Number(payload.bikes),
+        reason: String(payload.reason || ""),
+        status: "active",
+        createdAt: new Date().toISOString()
+      };
+
+      if (!block.date || !block.start || !block.end || block.end <= block.start || block.bikes < 1 || block.bikes > fleetSize) {
+        sendJson(res, 400, { message: "Nieprawidłowe dane blokady." });
+        return;
+      }
+
+      const bookings = await readBookings();
+      const blocks = await readBlocks();
+      if (availableBikes([...bookings, ...blocks], block) < block.bikes) {
+        sendJson(res, 409, { message: "W tym terminie nie ma tylu wolnych rowerów do zablokowania." });
+        return;
+      }
+
+      const nextBlocks = [...blocks, block];
+      await writeBlocks(nextBlocks);
+      sendJson(res, 201, { block, blocks: nextBlocks });
+      return;
+    }
+
+    const blockCancelMatch = req.url.match(/^\/api\/admin\/blocks\/([^/]+)\/cancel$/);
+    if (blockCancelMatch && req.method === "POST") {
+      if (!requireAdmin(req, res)) {
+        return;
+      }
+
+      const blocks = await readBlocks();
+      const id = decodeURIComponent(blockCancelMatch[1]);
+      const nextBlocks = blocks.map((block) =>
+        block.id === id
+          ? {
+              ...block,
+              status: "cancelled",
+              cancelledAt: new Date().toISOString()
+            }
+          : block
+      );
+
+      if (!blocks.some((block) => block.id === id)) {
+        sendJson(res, 404, { message: "Nie znaleziono blokady." });
+        return;
+      }
+
+      await writeBlocks(nextBlocks);
+      sendJson(res, 200, { ok: true, blocks: nextBlocks });
       return;
     }
 
