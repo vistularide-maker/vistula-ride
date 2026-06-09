@@ -237,6 +237,35 @@ function formatHour(hour) {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
+function parseDateValue(value) {
+  const text = String(value || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return null;
+  }
+
+  const date = new Date(`${text}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function dateRange(from, to) {
+  const start = parseDateValue(from);
+  const end = parseDateValue(to);
+
+  if (!start || !end || start > end) {
+    return [];
+  }
+
+  const dates = [];
+  const current = new Date(start);
+
+  while (current <= end) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+
+  return dates;
+}
+
 function isValidBookingWindow(booking) {
   const allowedDurations = [1, 3, 11];
   const duration = Number(booking.end) - Number(booking.start);
@@ -567,9 +596,10 @@ const server = http.createServer(async (req, res) => {
       }
 
       const payload = await readJson(req);
-      const block = {
-        id: randomUUID(),
-        date: String(payload.date || ""),
+      const dateFrom = String(payload.dateFrom || payload.date || "");
+      const dateTo = String(payload.dateTo || payload.date || dateFrom);
+      const dates = dateRange(dateFrom, dateTo);
+      const template = {
         start: Number(payload.start),
         end: Number(payload.end),
         bikes: Number(payload.bikes),
@@ -578,21 +608,40 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString()
       };
 
-      if (!block.date || !block.start || !block.end || block.end <= block.start || block.bikes < 1 || block.bikes > fleetSize) {
+      if (
+        !dates.length ||
+        dates.length > 90 ||
+        !template.start ||
+        !template.end ||
+        template.end <= template.start ||
+        template.start < 8 ||
+        template.end > 20 ||
+        template.bikes < 1 ||
+        template.bikes > fleetSize
+      ) {
         sendJson(res, 400, { message: "Nieprawidłowe dane blokady." });
         return;
       }
 
       const bookings = await readBookings();
       const blocks = await readBlocks();
-      if (availableBikes([...bookings, ...blocks], block) < block.bikes) {
-        sendJson(res, 409, { message: "W tym terminie nie ma tylu wolnych rowerów do zablokowania." });
+      const unavailableDate = dates.find(
+        (date) => availableBikes([...bookings, ...blocks], { ...template, date }) < template.bikes
+      );
+
+      if (unavailableDate) {
+        sendJson(res, 409, { message: `W dniu ${unavailableDate} nie ma tylu wolnych rowerów do zablokowania.` });
         return;
       }
 
-      const nextBlocks = [...blocks, block];
+      const newBlocks = dates.map((date) => ({
+        ...template,
+        id: randomUUID(),
+        date
+      }));
+      const nextBlocks = [...blocks, ...newBlocks];
       await writeBlocks(nextBlocks);
-      sendJson(res, 201, { block, blocks: nextBlocks });
+      sendJson(res, 201, { block: newBlocks[0], createdCount: newBlocks.length, blocks: nextBlocks });
       return;
     }
 

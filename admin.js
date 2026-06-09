@@ -27,6 +27,14 @@ function formatHour(hour) {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
+function blockDateLabel(block) {
+  if (block.dateFrom && block.dateTo && block.dateFrom !== block.dateTo) {
+    return `${escapeHtml(block.dateFrom)}-${escapeHtml(block.dateTo)}`;
+  }
+
+  return escapeHtml(block.date || block.dateFrom || "-");
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -91,7 +99,7 @@ function renderBlocks(blocks) {
       return `
         <tr class="${cancelled ? "is-cancelled" : ""}">
           <td><span class="admin-status">${statusLabel(block.status)}</span></td>
-          <td>${escapeHtml(block.date)}<br>${formatHour(block.start)}-${formatHour(block.end)}</td>
+          <td>${blockDateLabel(block)}<br>${formatHour(block.start)}-${formatHour(block.end)}</td>
           <td>${escapeHtml(block.bikes)}</td>
           <td>${escapeHtml(block.reason || "-")}</td>
           <td>${escapeHtml(new Date(block.createdAt).toLocaleString("pl-PL"))}</td>
@@ -213,7 +221,8 @@ blockForm.addEventListener("submit", async (event) => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      date: data.get("date"),
+      dateFrom: data.get("dateFrom"),
+      dateTo: data.get("dateTo"),
       start: Number(data.get("start")),
       end: Number(data.get("end")),
       bikes: Number(data.get("bikes")),
@@ -228,7 +237,7 @@ blockForm.addEventListener("submit", async (event) => {
   }
 
   blockForm.reset();
-  adminMessage.textContent = "Blokada została dodana.";
+  adminMessage.textContent = payload.createdCount > 1 ? `Dodano blokady: ${payload.createdCount}.` : "Blokada została dodana.";
   renderBlocks(payload.blocks);
 });
 
