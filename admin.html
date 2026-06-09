@@ -50,6 +50,44 @@
 
         <section class="admin-panel" id="bookingsPanel" role="tabpanel">
           <h2 class="admin-section-title">Rezerwacje</h2>
+          <form class="admin-filters" id="bookingFilters">
+            <label>
+              <span>Status</span>
+              <select name="status">
+                <option value="all">Wszystkie</option>
+                <option value="active">Aktywne</option>
+                <option value="cancelled">Anulowane</option>
+              </select>
+            </label>
+            <label>
+              <span>Dzień rezerwacji od</span>
+              <input type="date" name="reservedFrom">
+            </label>
+            <label>
+              <span>Dzień rezerwacji do</span>
+              <input type="date" name="reservedTo">
+            </label>
+            <label>
+              <span>Złożono od</span>
+              <input type="date" name="createdFrom">
+            </label>
+            <label>
+              <span>Złożono do</span>
+              <input type="date" name="createdTo">
+            </label>
+            <label>
+              <span>Sortuj</span>
+              <select name="sort">
+                <option value="reservedAsc">Dzień rezerwacji: najwcześniejsze</option>
+                <option value="reservedDesc">Dzień rezerwacji: najpóźniejsze</option>
+                <option value="createdAsc">Złożenie: najwcześniejsze</option>
+                <option value="createdDesc">Złożenie: najnowsze</option>
+              </select>
+            </label>
+            <button class="button button-ghost admin-filter-reset" type="reset">
+              <span>Wyczyść</span>
+            </button>
+          </form>
           <div class="admin-table-wrap">
             <table class="admin-table">
               <thead>
@@ -152,6 +190,6 @@
       </section>
     </main>
 
-    <script src="admin.js?v=20260609-admin-tabs"></script>
+    <script src="admin.js?v=20260609-admin-filters-cancel"></script>
   </body>
 </html>

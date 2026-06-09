@@ -235,6 +235,36 @@ svg {
   width: 100%;
 }
 
+.admin-filters {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) repeat(4, minmax(145px, 1fr)) minmax(220px, 1.15fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin: 0 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  padding: 16px;
+}
+
+.admin-filters label {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-filters span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-filter-reset {
+  min-height: 48px;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
 .admin-blocks-wrap {
   margin-bottom: 24px;
 }
@@ -306,6 +336,7 @@ svg {
 }
 
 .admin-cancel {
+  display: block;
   border: 1px solid #b83232;
   border-radius: 6px;
   background: #fff;
@@ -314,6 +345,20 @@ svg {
   font: inherit;
   font-weight: 900;
   cursor: pointer;
+}
+
+.admin-cancel-reason {
+  display: block;
+  width: min(190px, 100%);
+  min-height: 38px;
+  margin: 8px 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .admin-paid {
@@ -330,7 +375,8 @@ svg {
 }
 
 .admin-cancel:disabled,
-.admin-paid:disabled {
+.admin-paid:disabled,
+.admin-cancel-reason:disabled {
   cursor: not-allowed;
   opacity: 0.48;
 }
@@ -1495,6 +1541,10 @@ a:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .admin-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .product-page-hero {
     min-height: 660px;
   }
@@ -1546,6 +1596,10 @@ a:focus-visible {
   }
 
   .admin-block-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-filters {
     grid-template-columns: 1fr;
   }
 

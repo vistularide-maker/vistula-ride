@@ -11,6 +11,7 @@ const fleetSize = 4;
 const adminUser = process.env.ADMIN_USER || "admin";
 const adminPassword = process.env.ADMIN_PASSWORD || "vistula2026";
 const adminSession = process.env.ADMIN_SESSION || randomUUID();
+const cancellationReasons = new Set(["brak płatności", "brak dokumentu", "błąd po naszej stronie"]);
 let dbPool = null;
 
 const types = {
@@ -28,7 +29,7 @@ async function readBookings() {
   if (dbPool) {
     const result = await dbPool.query(`
       SELECT id, date, start_hour, end_hour, bikes, package, price, payment_provider,
-             payment_status, status, customer, document, created_at, cancelled_at
+             payment_status, status, customer, document, created_at, cancelled_at, cancellation_reason
       FROM bookings
       ORDER BY created_at DESC
     `);
@@ -47,7 +48,8 @@ async function readBookings() {
       customer: booking.customer,
       document: booking.document,
       createdAt: booking.created_at,
-      cancelledAt: booking.cancelled_at
+      cancelledAt: booking.cancelled_at,
+      cancellationReason: booking.cancellation_reason || ""
     }));
   }
 
@@ -70,9 +72,9 @@ async function writeBookings(bookings) {
           `
             INSERT INTO bookings (
               id, date, start_hour, end_hour, bikes, package, price, payment_provider,
-              payment_status, status, customer, document, created_at, cancelled_at
+              payment_status, status, customer, document, created_at, cancelled_at, cancellation_reason
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13, $14)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13, $14, $15)
           `,
           [
             booking.id,
@@ -88,7 +90,8 @@ async function writeBookings(bookings) {
             JSON.stringify(booking.customer || {}),
             JSON.stringify(booking.document || null),
             booking.createdAt || new Date().toISOString(),
-            booking.cancelledAt || null
+            booking.cancelledAt || null,
+            booking.cancellationReason || ""
           ]
         );
       }
@@ -226,6 +229,7 @@ async function initDatabase() {
 
   await dbPool.query("ALTER TABLE blocks ADD COLUMN IF NOT EXISTS date_from TEXT");
   await dbPool.query("ALTER TABLE blocks ADD COLUMN IF NOT EXISTS date_to TEXT");
+  await dbPool.query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancellation_reason TEXT NOT NULL DEFAULT ''");
   await dbPool.query("UPDATE blocks SET date_from = date WHERE date_from IS NULL");
   await dbPool.query("UPDATE blocks SET date_to = COALESCE(date_to, date_from, date) WHERE date_to IS NULL");
 }
@@ -402,6 +406,25 @@ function reservationEmailHtml(booking) {
   `;
 }
 
+function cancellationEmailHtml(booking) {
+  return `
+    <div style="font-family:Arial,sans-serif;color:#071524;line-height:1.5">
+      <h1 style="margin:0 0 16px">Anulowanie rezerwacji Vistula Ride</h1>
+      <p>Dzień dobry ${escapeHtml(booking.customer.name)},</p>
+      <p>Twoja rezerwacja roweru elektrycznego została anulowana.</p>
+      <table style="border-collapse:collapse;margin:20px 0;width:100%;max-width:560px">
+        <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Data</strong></td><td style="padding:8px;border:1px solid #d8dde5">${escapeHtml(booking.date)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Godzina</strong></td><td style="padding:8px;border:1px solid #d8dde5">${formatHour(booking.start)}-${formatHour(booking.end)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Pakiet</strong></td><td style="padding:8px;border:1px solid #d8dde5">${escapeHtml(booking.package)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Powód anulacji</strong></td><td style="padding:8px;border:1px solid #d8dde5">${escapeHtml(booking.cancellationReason)}</td></tr>
+      </table>
+      <p>Jeśli płatność została już wykonana, pieniądze zostaną zwrócone na rachunek użyty do płatności.</p>
+      <p>W razie pytań odpisz na tę wiadomość lub skontaktuj się z nami: rezerwacje@vistularide.pl.</p>
+      <p>Vistula Ride</p>
+    </div>
+  `;
+}
+
 async function sendEmail({ to, subject, html }) {
   const from = getMailFrom();
 
@@ -427,6 +450,19 @@ async function sendEmail({ to, subject, html }) {
     const body = await response.text();
     throw new Error(`Resend error ${response.status}: ${body}`);
   }
+}
+
+async function sendCancellationEmail(booking) {
+  if (!booking.customer?.email) {
+    return;
+  }
+
+  await sendEmail({
+    to: booking.customer.email,
+    subject: `Anulowanie rezerwacji Vistula Ride: ${booking.date}, ${formatHour(booking.start)}`,
+    html: cancellationEmailHtml(booking)
+  });
+  console.log(`Wysłano mail anulowania: klient ${booking.customer.email}`);
 }
 
 async function sendReservationEmails(booking) {
@@ -771,24 +807,39 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const payload = await readJson(req);
+      const reason = String(payload.reason || "").trim();
+      if (!cancellationReasons.has(reason)) {
+        sendJson(res, 400, { message: "Wybierz prawidłowy powód anulacji." });
+        return;
+      }
+
       const bookings = await readBookings();
       const id = decodeURIComponent(cancelMatch[1]);
-      const nextBookings = bookings.map((booking) =>
-        booking.id === id
-          ? {
-              ...booking,
-              status: "cancelled",
-              cancelledAt: new Date().toISOString()
-            }
-          : booking
-      );
+      const booking = bookings.find((item) => item.id === id);
 
-      if (!bookings.some((booking) => booking.id === id)) {
+      if (!booking) {
         sendJson(res, 404, { message: "Nie znaleziono rezerwacji." });
         return;
       }
 
+      const cancelledAt = new Date().toISOString();
+      const cancelledBooking = {
+        ...booking,
+        status: "cancelled",
+        cancelledAt,
+        cancellationReason: reason
+      };
+      const nextBookings = bookings.map((booking) =>
+        booking.id === id
+          ? cancelledBooking
+          : booking
+      );
+
       await writeBookings(nextBookings);
+      sendCancellationEmail(cancelledBooking).catch((error) => {
+        console.warn("Nie udało się wysłać maila anulowania:", error.message);
+      });
       sendJson(res, 200, { ok: true, bookings: nextBookings });
       return;
     }

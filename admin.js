@@ -6,6 +6,7 @@ const adminMessage = document.querySelector("#adminMessage");
 const blockMessage = document.querySelector("#blockMessage") || adminMessage;
 const bookingsTable = document.querySelector("#bookingsTable");
 const blocksTable = document.querySelector("#blocksTable");
+const bookingFilters = document.querySelector("#bookingFilters");
 const blockForm = document.querySelector("#blockForm");
 const logoutButton = document.querySelector("#logoutButton");
 const tabButtons = document.querySelectorAll(".admin-tab");
@@ -13,6 +14,8 @@ const adminPanels = document.querySelectorAll(".admin-panel");
 const blockDateFromInput = blockForm.querySelector('input[name="dateFrom"]');
 const blockDateToInput = blockForm.querySelector('input[name="dateTo"]');
 const blockSubmitButton = blockForm.querySelector('button[type="submit"]');
+const cancellationReasons = ["brak płatności", "brak dokumentu", "błąd po naszej stronie"];
+let bookingsCache = [];
 
 function statusLabel(status) {
   return status === "cancelled" ? "Anulowana" : "Aktywna";
@@ -74,6 +77,65 @@ function blockDateLabel(block) {
   return escapeHtml(block.date || block.dateFrom || "-");
 }
 
+function dateOnly(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value).slice(0, 10);
+  }
+
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+}
+
+function isInRange(value, from, to) {
+  if (!from && !to) {
+    return true;
+  }
+
+  if (!value) {
+    return false;
+  }
+
+  return (!from || value >= from) && (!to || value <= to);
+}
+
+function bookingSortValue(booking, sort) {
+  if (sort.startsWith("created")) {
+    return new Date(booking.createdAt || 0).getTime();
+  }
+
+  return `${booking.date || ""} ${String(booking.start || 0).padStart(2, "0")}`;
+}
+
+function filteredBookings() {
+  const data = new FormData(bookingFilters);
+  const status = data.get("status");
+  const reservedFrom = String(data.get("reservedFrom") || "");
+  const reservedTo = String(data.get("reservedTo") || "");
+  const createdFrom = String(data.get("createdFrom") || "");
+  const createdTo = String(data.get("createdTo") || "");
+  const sort = String(data.get("sort") || "reservedAsc");
+
+  return [...bookingsCache]
+    .filter((booking) => status === "all" || (booking.status || "active") === status)
+    .filter((booking) => isInRange(booking.date, reservedFrom, reservedTo))
+    .filter((booking) => isInRange(dateOnly(booking.createdAt), createdFrom, createdTo))
+    .sort((a, b) => {
+      const first = bookingSortValue(a, sort);
+      const second = bookingSortValue(b, sort);
+      const result = typeof first === "number" ? first - second : String(first).localeCompare(String(second));
+      return sort.endsWith("Desc") ? -result : result;
+    });
+}
+
+function applyBookingFilters() {
+  renderBookings(filteredBookings());
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -81,6 +143,16 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function cancellationReasonOptions(selectedReason = "") {
+  return [
+    '<option value="">Powód anulacji</option>',
+    ...cancellationReasons.map((reason) => {
+      const selected = reason === selectedReason ? " selected" : "";
+      return `<option value="${escapeHtml(reason)}"${selected}>${escapeHtml(reason)}</option>`;
+    })
+  ].join("");
 }
 
 function documentLink(booking) {
@@ -98,12 +170,12 @@ function renderBookings(bookings) {
   }
 
   bookingsTable.innerHTML = bookings
-    .sort((a, b) => `${b.date} ${b.start}`.localeCompare(`${a.date} ${a.start}`))
     .map((booking) => {
       const cancelled = booking.status === "cancelled";
+      const cancellationReason = booking.cancellationReason ? `<br><small>Powód: ${escapeHtml(booking.cancellationReason)}</small>` : "";
       return `
         <tr class="${cancelled ? "is-cancelled" : ""}">
-          <td><span class="admin-status">${statusLabel(booking.status)}</span></td>
+          <td><span class="admin-status">${statusLabel(booking.status)}</span>${cancellationReason}</td>
           <td><span class="admin-payment ${booking.paymentStatus === "paid" ? "is-paid" : ""}">${paymentLabel(booking.paymentStatus)}</span></td>
           <td>${escapeHtml(booking.date)}<br>${formatHour(booking.start)}-${formatHour(booking.end)}</td>
           <td>${escapeHtml(booking.package)}<br>${escapeHtml(booking.price || "")} zł</td>
@@ -115,6 +187,9 @@ function renderBookings(bookings) {
             <button class="admin-paid" data-id="${escapeHtml(booking.id)}" type="button" ${cancelled || booking.paymentStatus === "paid" ? "disabled" : ""}>
               Opłacone
             </button>
+            <select class="admin-cancel-reason" data-id="${escapeHtml(booking.id)}" ${cancelled ? "disabled" : ""} aria-label="Powód anulacji">
+              ${cancellationReasonOptions(booking.cancellationReason)}
+            </select>
             <button class="admin-cancel" data-id="${escapeHtml(booking.id)}" type="button" ${cancelled ? "disabled" : ""}>
               Anuluj
             </button>
@@ -161,10 +236,10 @@ async function loadBookings() {
     return;
   }
 
-  const bookings = await response.json();
+  bookingsCache = await response.json();
   loginView.hidden = true;
   dashboardView.hidden = false;
-  renderBookings(bookings);
+  applyBookingFilters();
 }
 
 async function loadBlocks() {
@@ -237,7 +312,8 @@ bookingsTable.addEventListener("click", async (event) => {
     }
 
     adminMessage.textContent = "Rezerwacja oznaczona jako opłacona.";
-    renderBookings(payload.bookings);
+    bookingsCache = payload.bookings;
+    applyBookingFilters();
     return;
   }
 
@@ -246,13 +322,24 @@ bookingsTable.addEventListener("click", async (event) => {
     return;
   }
 
-  const confirmed = window.confirm("Anulować tę rezerwację?");
+  const reasonSelect = button.closest("td").querySelector(".admin-cancel-reason");
+  const reason = reasonSelect?.value || "";
+
+  if (!reason) {
+    adminMessage.textContent = "Wybierz powód anulacji rezerwacji.";
+    reasonSelect?.focus();
+    return;
+  }
+
+  const confirmed = window.confirm(`Anulować tę rezerwację? Powód: ${reason}`);
   if (!confirmed) {
     return;
   }
 
   const response = await fetch(`/api/admin/bookings/${encodeURIComponent(button.dataset.id)}/cancel`, {
-    method: "POST"
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason })
   });
   const payload = await response.json();
 
@@ -261,8 +348,22 @@ bookingsTable.addEventListener("click", async (event) => {
     return;
   }
 
-  adminMessage.textContent = "Rezerwacja została anulowana.";
-  renderBookings(payload.bookings);
+  adminMessage.textContent = "Rezerwacja została anulowana. Klient otrzyma mail z powodem anulacji.";
+  bookingsCache = payload.bookings;
+  applyBookingFilters();
+});
+
+bookingFilters.addEventListener("input", () => {
+  adminMessage.textContent = "";
+  applyBookingFilters();
+});
+
+bookingFilters.addEventListener("submit", (event) => {
+  event.preventDefault();
+});
+
+bookingFilters.addEventListener("reset", () => {
+  window.setTimeout(applyBookingFilters, 0);
 });
 
 blockForm.addEventListener("submit", async (event) => {
