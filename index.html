@@ -10,13 +10,6 @@
     >
     <link rel="preload" as="image" href="assets/hero-vistula-ride.png">
     <link rel="stylesheet" href="styles.css">
-    <script type="text/javascript">
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "wzryongxpn");
-    </script>
   </head>
   <body>
     <header class="site-header" id="top">
@@ -295,11 +288,20 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
           </a>
         </div>
+        <div class="map-consent" id="mapConsent">
+          <div>
+            <strong>Mapa Google</strong>
+            <p>Mapa jest usługą zewnętrzną i może korzystać z cookies Google. Możesz ją włączyć osobno.</p>
+          </div>
+          <button class="button button-primary" type="button" data-cookie-allow-maps>Pokaż mapę</button>
+        </div>
         <iframe
+          id="locationMap"
           title="Mapa lokalizacji Na Wiślanej Skarpie"
-          src="https://www.google.com/maps?q=Na%20Wi%C5%9Blanej%20Skarpie%2C%20Widokowa%2012%2C%2087-125%20Stajenczynki&output=embed"
+          data-src="https://www.google.com/maps?q=Na%20Wi%C5%9Blanej%20Skarpie%2C%20Widokowa%2012%2C%2087-125%20Stajenczynki&output=embed"
           loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
+          hidden
         ></iframe>
       </section>
     </main>
@@ -329,10 +331,62 @@
       </div>
       <div class="footer-bottom">
         <p>© 2026 Vistula Ride. Wszelkie prawa zastrzeżone.</p>
-        <p><a href="regulamin.html">Regulamin</a> <a href="polityka-prywatnosci.html">Polityka prywatności</a></p>
+        <p>
+          <a href="regulamin.html">Regulamin</a>
+          <a href="polityka-prywatnosci.html">Polityka prywatności</a>
+          <button class="footer-link-button" type="button" data-cookie-settings>Ustawienia cookies</button>
+        </p>
       </div>
     </footer>
 
-    <script src="script.js?v=20260609-range-blocks"></script>
+    <section class="cookie-consent" id="cookieConsent" aria-label="Zgoda na pliki cookies" hidden>
+      <div class="cookie-consent-inner">
+        <div class="cookie-copy">
+          <h2>Cookies</h2>
+          <p>Używamy niezbędnych mechanizmów do działania strony oraz, za Twoją zgodą, cookies analitycznych Microsoft Clarity i osadzonej mapy Google.</p>
+          <a href="polityka-prywatnosci.html#cookies">Więcej w polityce prywatności</a>
+        </div>
+        <div class="cookie-actions" aria-label="Decyzja dotycząca cookies">
+          <button class="button button-ghost cookie-reject" type="button" data-cookie-reject>Odrzuć</button>
+          <button class="button button-ghost" type="button" data-cookie-manage>Ustawienia</button>
+          <button class="button button-primary" type="button" data-cookie-accept>Akceptuję</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="cookie-modal" id="cookieModal" aria-labelledby="cookieModalTitle" role="dialog" aria-modal="true" hidden>
+      <div class="cookie-modal-panel">
+        <h2 id="cookieModalTitle">Ustawienia cookies</h2>
+        <p>Możesz zaakceptować lub odrzucić analitykę oraz mapę Google. Cookies niezbędne pozostają aktywne, bo są potrzebne do działania strony i zapamiętania Twojej decyzji.</p>
+        <div class="cookie-option">
+          <div>
+            <strong>Niezbędne</strong>
+            <span>Obsługa formularza, bezpieczeństwo i zapis ustawień zgody.</span>
+          </div>
+          <input type="checkbox" checked disabled aria-label="Cookies niezbędne zawsze aktywne">
+        </div>
+        <label class="cookie-option">
+          <div>
+            <strong>Analityczne</strong>
+            <span>Microsoft Clarity pomaga nam sprawdzać, które elementy strony wymagają poprawy.</span>
+          </div>
+          <input type="checkbox" id="analyticsCookies">
+        </label>
+        <label class="cookie-option">
+          <div>
+            <strong>Mapa Google</strong>
+            <span>Wyświetlenie mapy lokalizacji i obsługa danych przez Google.</span>
+          </div>
+          <input type="checkbox" id="mapsCookies">
+        </label>
+        <div class="cookie-modal-actions">
+          <button class="button button-ghost" type="button" data-cookie-reject>Odrzuć wszystkie</button>
+          <button class="button button-ghost" type="button" data-cookie-close>Zamknij</button>
+          <button class="button button-primary" type="button" data-cookie-save>Zapisz wybór</button>
+        </div>
+      </div>
+    </section>
+
+    <script src="script.js?v=20260609-cookies"></script>
   </body>
 </html>
