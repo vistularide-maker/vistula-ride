@@ -536,7 +536,13 @@ function requireAdmin(req, res) {
 
 async function serveStatic(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const requested = url.pathname === "/" ? "/index.html" : url.pathname === "/admin" ? "/admin.html" : decodeURIComponent(url.pathname);
+  const cleanRoutes = {
+    "/": "/index.html",
+    "/admin": "/admin.html",
+    "/VARUNM26-2": "/VARUNM26-2.html",
+    "/varunm26-2": "/VARUNM26-2.html"
+  };
+  const requested = cleanRoutes[url.pathname] || decodeURIComponent(url.pathname);
   const filePath = path.normalize(path.join(root, requested));
 
   if (!filePath.startsWith(root)) {

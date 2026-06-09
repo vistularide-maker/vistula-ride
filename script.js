@@ -1,8 +1,8 @@
 const form = document.querySelector("#bookingForm");
 const rentalPrice = document.querySelector("#rentalPrice");
 const message = document.querySelector("#formMessage");
-const dateInput = form.querySelector('input[name="date"]');
-const timeSelect = form.querySelector('select[name="time"]');
+const dateInput = form?.querySelector('input[name="date"]');
+const timeSelect = form?.querySelector('select[name="time"]');
 const availabilityMessage = document.querySelector("#availabilityMessage");
 const fleetSize = 4;
 const storageKey = "vistulaRideBookings";
@@ -84,7 +84,7 @@ function loadClarity() {
 }
 
 function loadLocationMap() {
-  if (!locationMap.dataset.src) {
+  if (!locationMap || !mapConsent || !locationMap.dataset.src) {
     return;
   }
 
@@ -94,20 +94,36 @@ function loadLocationMap() {
 }
 
 function unloadLocationMap() {
+  if (!locationMap || !mapConsent) {
+    return;
+  }
+
   locationMap.removeAttribute("src");
   locationMap.hidden = true;
   mapConsent.hidden = false;
 }
 
 function showCookieBanner() {
+  if (!cookieConsent) {
+    return;
+  }
+
   cookieConsent.hidden = false;
 }
 
 function hideCookieBanner() {
+  if (!cookieConsent) {
+    return;
+  }
+
   cookieConsent.hidden = true;
 }
 
 function openCookieModal() {
+  if (!cookieModal || !analyticsCookies || !mapsCookies) {
+    return;
+  }
+
   const consent = readCookieConsent();
   analyticsCookies.checked = Boolean(consent?.analytics);
   mapsCookies.checked = Boolean(consent?.maps);
@@ -116,6 +132,10 @@ function openCookieModal() {
 }
 
 function closeCookieModal() {
+  if (!cookieModal) {
+    return;
+  }
+
   cookieModal.hidden = true;
 }
 
@@ -177,16 +197,16 @@ document.querySelectorAll("[data-cookie-manage], [data-cookie-settings]").forEac
   button.addEventListener("click", openCookieModal);
 });
 
-document.querySelector("[data-cookie-save]").addEventListener("click", () => {
+document.querySelector("[data-cookie-save]")?.addEventListener("click", () => {
   saveCookieConsent({
     analytics: analyticsCookies.checked,
     maps: mapsCookies.checked
   });
 });
 
-document.querySelector("[data-cookie-close]").addEventListener("click", closeCookieModal);
+document.querySelector("[data-cookie-close]")?.addEventListener("click", closeCookieModal);
 
-document.querySelector("[data-cookie-allow-maps]").addEventListener("click", () => {
+document.querySelector("[data-cookie-allow-maps]")?.addEventListener("click", () => {
   const consent = readCookieConsent();
   saveCookieConsent({
     analytics: Boolean(consent?.analytics),
@@ -194,18 +214,19 @@ document.querySelector("[data-cookie-allow-maps]").addEventListener("click", () 
   });
 });
 
-cookieModal.addEventListener("click", (event) => {
+cookieModal?.addEventListener("click", (event) => {
   if (event.target === cookieModal) {
     closeCookieModal();
   }
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !cookieModal.hidden) {
+  if (event.key === "Escape" && cookieModal && !cookieModal.hidden) {
     closeCookieModal();
   }
 });
 
+if (form && dateInput && timeSelect && rentalPrice && message) {
 const today = new Date();
 today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
 dateInput.min = today.toISOString().slice(0, 10);
@@ -484,3 +505,6 @@ bookingsCache = readStoredBookings();
 initCookieConsent();
 updateTotal();
 syncBookings();
+} else {
+  initCookieConsent();
+}
