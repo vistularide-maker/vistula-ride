@@ -467,7 +467,11 @@ async function serveStatic(req, res) {
 
   try {
     const body = await fs.readFile(filePath);
-    res.writeHead(200, { "Content-Type": types[path.extname(filePath)] || "application/octet-stream" });
+    const headers = { "Content-Type": types[path.extname(filePath)] || "application/octet-stream" };
+    if (requested === "/admin.html" || requested === "/admin.js") {
+      headers["Cache-Control"] = "no-store";
+    }
+    res.writeHead(200, headers);
     res.end(body);
   } catch {
     res.writeHead(404);

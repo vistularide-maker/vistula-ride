@@ -3,10 +3,14 @@ const dashboardView = document.querySelector("#dashboardView");
 const loginForm = document.querySelector("#adminLoginForm");
 const loginMessage = document.querySelector("#loginMessage");
 const adminMessage = document.querySelector("#adminMessage");
+const blockMessage = document.querySelector("#blockMessage") || adminMessage;
 const bookingsTable = document.querySelector("#bookingsTable");
 const blocksTable = document.querySelector("#blocksTable");
 const blockForm = document.querySelector("#blockForm");
 const logoutButton = document.querySelector("#logoutButton");
+const blockDateFromInput = blockForm.querySelector('input[name="dateFrom"]');
+const blockDateToInput = blockForm.querySelector('input[name="dateTo"]');
+const blockSubmitButton = blockForm.querySelector('button[type="submit"]');
 
 function statusLabel(status) {
   return status === "cancelled" ? "Anulowana" : "Aktywna";
@@ -25,6 +29,14 @@ function paymentLabel(status) {
 
 function formatHour(hour) {
   return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function syncBlockDateInputs() {
+  blockDateToInput.min = blockDateFromInput.value;
+
+  if (blockDateToInput.value && blockDateFromInput.value && blockDateToInput.value < blockDateFromInput.value) {
+    blockDateToInput.value = blockDateFromInput.value;
+  }
 }
 
 function blockDateLabel(block) {
@@ -214,32 +226,52 @@ bookingsTable.addEventListener("click", async (event) => {
 
 blockForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  blockMessage.textContent = "";
   adminMessage.textContent = "";
 
   const data = new FormData(blockForm);
-  const response = await fetch("/api/admin/blocks", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      dateFrom: data.get("dateFrom"),
-      dateTo: data.get("dateTo"),
-      start: Number(data.get("start")),
-      end: Number(data.get("end")),
-      bikes: Number(data.get("bikes")),
-      reason: data.get("reason")
-    })
-  });
-  const payload = await response.json();
+  const dateFrom = String(data.get("dateFrom") || "");
+  const dateTo = String(data.get("dateTo") || dateFrom);
 
-  if (!response.ok) {
-    adminMessage.textContent = payload.message || "Nie udało się dodać blokady.";
+  if (dateTo < dateFrom) {
+    blockMessage.textContent = "Data do nie może być wcześniejsza niż Data od.";
     return;
   }
 
-  blockForm.reset();
-  adminMessage.textContent = payload.createdCount > 1 ? `Dodano blokady: ${payload.createdCount}.` : "Blokada została dodana.";
-  renderBlocks(payload.blocks);
+  blockSubmitButton.disabled = true;
+
+  try {
+    const response = await fetch("/api/admin/blocks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dateFrom,
+        dateTo,
+        start: Number(data.get("start")),
+        end: Number(data.get("end")),
+        bikes: Number(data.get("bikes")),
+        reason: data.get("reason")
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      blockMessage.textContent = payload.message || "Nie udało się dodać blokady.";
+      return;
+    }
+
+    blockForm.reset();
+    syncBlockDateInputs();
+    blockMessage.textContent = payload.createdCount > 1 ? `Dodano blokady: ${payload.createdCount}.` : "Blokada została dodana.";
+    renderBlocks(payload.blocks || []);
+  } catch {
+    blockMessage.textContent = "Nie udało się połączyć z serwerem. Odśwież panel i spróbuj ponownie.";
+  } finally {
+    blockSubmitButton.disabled = false;
+  }
 });
+
+blockDateFromInput.addEventListener("change", syncBlockDateInputs);
 
 blocksTable.addEventListener("click", async (event) => {
   const button = event.target.closest(".admin-block-cancel");
