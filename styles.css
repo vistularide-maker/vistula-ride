@@ -161,6 +161,49 @@ svg {
   width: fit-content;
 }
 
+.admin-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 20px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.admin-tab {
+  appearance: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 14px 18px 12px;
+  font: inherit;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-tab:hover,
+.admin-tab.is-active {
+  color: var(--ink);
+}
+
+.admin-tab.is-active {
+  border-bottom-color: var(--gold);
+}
+
+.admin-panel {
+  display: block;
+}
+
+.admin-panel[hidden] {
+  display: none;
+}
+
+.admin-panel > .admin-section-title:first-child {
+  margin-top: 0;
+}
+
 .admin-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--line);

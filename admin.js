@@ -8,6 +8,8 @@ const bookingsTable = document.querySelector("#bookingsTable");
 const blocksTable = document.querySelector("#blocksTable");
 const blockForm = document.querySelector("#blockForm");
 const logoutButton = document.querySelector("#logoutButton");
+const tabButtons = document.querySelectorAll(".admin-tab");
+const adminPanels = document.querySelectorAll(".admin-panel");
 const blockDateFromInput = blockForm.querySelector('input[name="dateFrom"]');
 const blockDateToInput = blockForm.querySelector('input[name="dateTo"]');
 const blockSubmitButton = blockForm.querySelector('button[type="submit"]');
@@ -31,6 +33,31 @@ function formatHour(hour) {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
+function tabFromHash() {
+  return window.location.hash === "#blocks" ? "blocks" : "bookings";
+}
+
+function switchAdminTab(tabName, updateHash = true) {
+  const nextTab = tabName === "blocks" ? "blocks" : "bookings";
+
+  tabButtons.forEach((button) => {
+    const active = button.dataset.tab === nextTab;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+
+  adminPanels.forEach((panel) => {
+    panel.hidden = panel.id !== `${nextTab}Panel`;
+  });
+
+  adminMessage.textContent = "";
+  blockMessage.textContent = "";
+
+  if (updateHash) {
+    window.history.replaceState(null, "", nextTab === "blocks" ? "#blocks" : "#bookings");
+  }
+}
+
 function syncBlockDateInputs() {
   blockDateToInput.min = blockDateFromInput.value;
 
@@ -41,7 +68,7 @@ function syncBlockDateInputs() {
 
 function blockDateLabel(block) {
   if (block.dateFrom && block.dateTo && block.dateFrom !== block.dateTo) {
-    return `${escapeHtml(block.dateFrom)}-${escapeHtml(block.dateTo)}`;
+    return `${escapeHtml(block.dateFrom)} - ${escapeHtml(block.dateTo)}`;
   }
 
   return escapeHtml(block.date || block.dateFrom || "-");
@@ -182,6 +209,20 @@ logoutButton.addEventListener("click", async () => {
   loginView.hidden = false;
 });
 
+tabButtons.forEach((button) => {
+  button.addEventListener("click", async () => {
+    const tabName = button.dataset.tab;
+    switchAdminTab(tabName);
+
+    if (tabName === "blocks") {
+      await loadBlocks();
+      return;
+    }
+
+    await loadBookings();
+  });
+});
+
 bookingsTable.addEventListener("click", async (event) => {
   const paidButton = event.target.closest(".admin-paid");
   if (paidButton) {
@@ -262,7 +303,7 @@ blockForm.addEventListener("submit", async (event) => {
 
     blockForm.reset();
     syncBlockDateInputs();
-    blockMessage.textContent = payload.createdCount > 1 ? `Dodano blokady: ${payload.createdCount}.` : "Blokada została dodana.";
+    blockMessage.textContent = payload.daysCount > 1 ? `Blokada zakresu została dodana (${payload.daysCount} dni).` : "Blokada została dodana.";
     renderBlocks(payload.blocks || []);
   } catch {
     blockMessage.textContent = "Nie udało się połączyć z serwerem. Odśwież panel i spróbuj ponownie.";
@@ -298,4 +339,5 @@ blocksTable.addEventListener("click", async (event) => {
   renderBlocks(payload.blocks);
 });
 
+switchAdminTab(tabFromHash(), false);
 loadBookings().then(loadBlocks);

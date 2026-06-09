@@ -109,14 +109,16 @@ async function writeBookings(bookings) {
 async function readBlocks() {
   if (dbPool) {
     const result = await dbPool.query(`
-      SELECT id, date, start_hour, end_hour, bikes, reason, status, created_at, cancelled_at
+      SELECT id, date, date_from, date_to, start_hour, end_hour, bikes, reason, status, created_at, cancelled_at
       FROM blocks
       ORDER BY created_at DESC
     `);
 
-    return result.rows.map((block) => ({
+    return normalizeBlocks(result.rows.map((block) => ({
       id: block.id,
-      date: block.date,
+      date: block.date_from || block.date,
+      dateFrom: block.date_from || block.date,
+      dateTo: block.date_to || block.date_from || block.date,
       start: Number(block.start_hour),
       end: Number(block.end_hour),
       bikes: Number(block.bikes),
@@ -124,11 +126,11 @@ async function readBlocks() {
       status: block.status,
       createdAt: block.created_at,
       cancelledAt: block.cancelled_at
-    }));
+    })));
   }
 
   try {
-    return JSON.parse(await fs.readFile(blocksFile, "utf8"));
+    return normalizeBlocks(JSON.parse(await fs.readFile(blocksFile, "utf8")));
   } catch {
     return [];
   }
@@ -142,14 +144,18 @@ async function writeBlocks(blocks) {
       await client.query("DELETE FROM blocks");
 
       for (const block of blocks) {
+        const dateFrom = block.dateFrom || block.date;
+        const dateTo = block.dateTo || dateFrom;
         await client.query(
           `
-            INSERT INTO blocks (id, date, start_hour, end_hour, bikes, reason, status, created_at, cancelled_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO blocks (id, date, date_from, date_to, start_hour, end_hour, bikes, reason, status, created_at, cancelled_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
           `,
           [
             block.id,
-            block.date,
+            dateFrom,
+            dateFrom,
+            dateTo,
             block.start,
             block.end,
             block.bikes,
@@ -217,16 +223,27 @@ async function initDatabase() {
       cancelled_at TIMESTAMPTZ
     )
   `);
+
+  await dbPool.query("ALTER TABLE blocks ADD COLUMN IF NOT EXISTS date_from TEXT");
+  await dbPool.query("ALTER TABLE blocks ADD COLUMN IF NOT EXISTS date_to TEXT");
+  await dbPool.query("UPDATE blocks SET date_from = date WHERE date_from IS NULL");
+  await dbPool.query("UPDATE blocks SET date_to = COALESCE(date_to, date_from, date) WHERE date_to IS NULL");
 }
 
 function overlaps(first, second) {
   return first.start < second.end && second.start < first.end;
 }
 
+function isActiveOnDate(item, date) {
+  const dateFrom = item.dateFrom || item.date;
+  const dateTo = item.dateTo || dateFrom;
+  return dateFrom <= date && date <= dateTo;
+}
+
 function availableBikes(bookings, candidate) {
   const reserved = bookings
     .filter((booking) => booking.status !== "cancelled")
-    .filter((booking) => booking.date === candidate.date)
+    .filter((booking) => isActiveOnDate(booking, candidate.date))
     .filter((booking) => overlaps(candidate, booking))
     .reduce((sum, booking) => sum + Number(booking.bikes), 0);
 
@@ -264,6 +281,67 @@ function dateRange(from, to) {
   }
 
   return dates;
+}
+
+function normalizeBlock(block) {
+  const dateFrom = block.dateFrom || block.date;
+  const dateTo = block.dateTo || dateFrom;
+
+  return {
+    ...block,
+    date: dateFrom,
+    dateFrom,
+    dateTo
+  };
+}
+
+function nextDateValue(date) {
+  const parsed = parseDateValue(date);
+  if (!parsed) {
+    return "";
+  }
+
+  parsed.setUTCDate(parsed.getUTCDate() + 1);
+  return parsed.toISOString().slice(0, 10);
+}
+
+function normalizeBlocks(blocks) {
+  const prepared = blocks.map(normalizeBlock);
+  const ranges = prepared.filter((block) => block.dateFrom !== block.dateTo);
+  const singleDayBlocks = prepared.filter((block) => block.dateFrom === block.dateTo);
+  const groups = new Map();
+
+  singleDayBlocks.forEach((block) => {
+    const key = [
+      block.start,
+      block.end,
+      block.bikes,
+      block.reason || "",
+      block.status || "active",
+      block.createdAt || "",
+      block.cancelledAt || ""
+    ].join("|");
+
+    groups.set(key, [...(groups.get(key) || []), block]);
+  });
+
+  const merged = [];
+  groups.forEach((group) => {
+    group.sort((first, second) => first.dateFrom.localeCompare(second.dateFrom));
+
+    let current = null;
+    group.forEach((block) => {
+      if (!current || nextDateValue(current.dateTo) !== block.dateFrom) {
+        current = { ...block };
+        merged.push(current);
+        return;
+      }
+
+      current.dateTo = block.dateTo;
+    });
+  });
+
+  return [...ranges, ...merged];
 }
 
 function isValidBookingWindow(booking) {
@@ -419,6 +497,8 @@ function publicBlock(block) {
   return {
     id: block.id,
     date: block.date,
+    dateFrom: block.dateFrom || block.date,
+    dateTo: block.dateTo || block.dateFrom || block.date,
     start: block.start,
     end: block.end,
     bikes: block.bikes,
@@ -468,7 +548,7 @@ async function serveStatic(req, res) {
   try {
     const body = await fs.readFile(filePath);
     const headers = { "Content-Type": types[path.extname(filePath)] || "application/octet-stream" };
-    if (requested === "/admin.html" || requested === "/admin.js") {
+    if (requested === "/admin.html" || requested === "/admin.js" || requested === "/script.js") {
       headers["Cache-Control"] = "no-store";
     }
     res.writeHead(200, headers);
@@ -638,14 +718,16 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const newBlocks = dates.map((date) => ({
+      const block = {
         ...template,
         id: randomUUID(),
-        date
-      }));
-      const nextBlocks = [...blocks, ...newBlocks];
+        date: dateFrom,
+        dateFrom,
+        dateTo
+      };
+      const nextBlocks = [...blocks, block];
       await writeBlocks(nextBlocks);
-      sendJson(res, 201, { block: newBlocks[0], createdCount: newBlocks.length, blocks: nextBlocks });
+      sendJson(res, 201, { block, createdCount: 1, daysCount: dates.length, blocks: nextBlocks });
       return;
     }
 

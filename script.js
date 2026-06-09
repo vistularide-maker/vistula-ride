@@ -125,6 +125,12 @@ function overlaps(first, second) {
   return first.start < second.end && second.start < first.end;
 }
 
+function isActiveOnDate(item, date) {
+  const dateFrom = item.dateFrom || item.date;
+  const dateTo = item.dateTo || dateFrom;
+  return dateFrom <= date && date <= dateTo;
+}
+
 function availableBikes(date, time) {
   if (!date || !time) {
     return fleetSize;
@@ -133,7 +139,7 @@ function availableBikes(date, time) {
   const currentWindow = bookingWindow(time);
   const reserved = bookingsCache
     .filter((booking) => booking.status !== "cancelled")
-    .filter((booking) => booking.date === date)
+    .filter((booking) => isActiveOnDate(booking, date))
     .filter((booking) => overlaps(currentWindow, booking))
     .reduce((sum, booking) => sum + Number(booking.bikes), 0);
 

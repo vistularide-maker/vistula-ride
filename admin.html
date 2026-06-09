@@ -32,112 +32,126 @@
         <header class="admin-topbar">
           <div>
             <p class="eyebrow">Vistula Ride</p>
-            <h1>Rezerwacje</h1>
+            <h1>Panel admina</h1>
           </div>
           <button class="button button-ghost" id="logoutButton" type="button">
             <span>Wyloguj</span>
           </button>
         </header>
 
-        <section class="admin-card">
-          <h2>Blokada terminu</h2>
-          <form class="admin-block-form" id="blockForm">
-            <label>
-              <span>Data od</span>
-              <input type="date" name="dateFrom" required>
-            </label>
-            <label>
-              <span>Data do</span>
-              <input type="date" name="dateTo">
-            </label>
-            <label>
-              <span>Od</span>
-              <select name="start" required>
-                <option value="">Wybierz</option>
-                <option value="9">09:00</option>
-                <option value="10">10:00</option>
-                <option value="11">11:00</option>
-                <option value="12">12:00</option>
-                <option value="13">13:00</option>
-                <option value="14">14:00</option>
-                <option value="15">15:00</option>
-                <option value="16">16:00</option>
-                <option value="17">17:00</option>
-                <option value="18">18:00</option>
-                <option value="19">19:00</option>
-              </select>
-            </label>
-            <label>
-              <span>Do</span>
-              <select name="end" required>
-                <option value="">Wybierz</option>
-                <option value="10">10:00</option>
-                <option value="11">11:00</option>
-                <option value="12">12:00</option>
-                <option value="13">13:00</option>
-                <option value="14">14:00</option>
-                <option value="15">15:00</option>
-                <option value="16">16:00</option>
-                <option value="17">17:00</option>
-                <option value="18">18:00</option>
-                <option value="19">19:00</option>
-                <option value="20">20:00</option>
-              </select>
-            </label>
-            <label>
-              <span>Liczba rowerów</span>
-              <input type="number" name="bikes" value="1" min="1" max="4" required>
-            </label>
-            <label>
-              <span>Powód</span>
-              <input type="text" name="reason" placeholder="Np. serwis, rezerwacja telefoniczna">
-            </label>
-            <button class="button button-primary" type="submit">
-              <span>Zablokuj</span>
-            </button>
-          </form>
-          <p class="form-message block-message" id="blockMessage" role="status"></p>
+        <div class="admin-tabs" role="tablist" aria-label="Sekcje panelu admina">
+          <button class="admin-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="bookingsPanel" data-tab="bookings">
+            Rezerwacje
+          </button>
+          <button class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="blocksPanel" data-tab="blocks">
+            Blokady terminów
+          </button>
+        </div>
+
+        <section class="admin-panel" id="bookingsPanel" role="tabpanel">
+          <h2 class="admin-section-title">Rezerwacje</h2>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Płatność</th>
+                  <th>Termin</th>
+                  <th>Pakiet</th>
+                  <th>Klient</th>
+                  <th>Kontakt</th>
+                  <th>Dokument</th>
+                  <th>Utworzono</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody id="bookingsTable"></tbody>
+            </table>
+          </div>
+          <p class="form-message" id="adminMessage" role="status"></p>
         </section>
 
-        <div class="admin-table-wrap admin-blocks-wrap">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>Termin</th>
-                <th>Rowerów</th>
-                <th>Powód</th>
-                <th>Utworzono</th>
-                <th>Akcje</th>
-              </tr>
-            </thead>
-            <tbody id="blocksTable"></tbody>
-          </table>
-        </div>
+        <section class="admin-panel" id="blocksPanel" role="tabpanel" hidden>
+          <section class="admin-card">
+            <h2>Blokada terminu</h2>
+            <form class="admin-block-form" id="blockForm">
+              <label>
+                <span>Data od</span>
+                <input type="date" name="dateFrom" required>
+              </label>
+              <label>
+                <span>Data do</span>
+                <input type="date" name="dateTo">
+              </label>
+              <label>
+                <span>Od</span>
+                <select name="start" required>
+                  <option value="">Wybierz</option>
+                  <option value="9">09:00</option>
+                  <option value="10">10:00</option>
+                  <option value="11">11:00</option>
+                  <option value="12">12:00</option>
+                  <option value="13">13:00</option>
+                  <option value="14">14:00</option>
+                  <option value="15">15:00</option>
+                  <option value="16">16:00</option>
+                  <option value="17">17:00</option>
+                  <option value="18">18:00</option>
+                  <option value="19">19:00</option>
+                </select>
+              </label>
+              <label>
+                <span>Do</span>
+                <select name="end" required>
+                  <option value="">Wybierz</option>
+                  <option value="10">10:00</option>
+                  <option value="11">11:00</option>
+                  <option value="12">12:00</option>
+                  <option value="13">13:00</option>
+                  <option value="14">14:00</option>
+                  <option value="15">15:00</option>
+                  <option value="16">16:00</option>
+                  <option value="17">17:00</option>
+                  <option value="18">18:00</option>
+                  <option value="19">19:00</option>
+                  <option value="20">20:00</option>
+                </select>
+              </label>
+              <label>
+                <span>Liczba rowerów</span>
+                <input type="number" name="bikes" value="1" min="1" max="4" required>
+              </label>
+              <label>
+                <span>Powód</span>
+                <input type="text" name="reason" placeholder="Np. serwis, rezerwacja telefoniczna">
+              </label>
+              <button class="button button-primary" type="submit">
+                <span>Zablokuj</span>
+              </button>
+            </form>
+            <p class="form-message block-message" id="blockMessage" role="status"></p>
+          </section>
 
-        <h2 class="admin-section-title">Rezerwacje</h2>
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>Płatność</th>
-                <th>Termin</th>
-                <th>Pakiet</th>
-                <th>Klient</th>
-                <th>Kontakt</th>
-                <th>Dokument</th>
-                <th>Utworzono</th>
-                <th>Akcje</th>
-              </tr>
-            </thead>
-            <tbody id="bookingsTable"></tbody>
-          </table>
-        </div>
-        <p class="form-message" id="adminMessage" role="status"></p>
+          <h2 class="admin-section-title">Blokady terminów</h2>
+          <div class="admin-table-wrap admin-blocks-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Termin</th>
+                  <th>Rowerów</th>
+                  <th>Powód</th>
+                  <th>Utworzono</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody id="blocksTable"></tbody>
+            </table>
+          </div>
+        </section>
       </section>
     </main>
 
-    <script src="admin.js?v=20260609-block-range-fix"></script>
+    <script src="admin.js?v=20260609-admin-tabs"></script>
   </body>
 </html>
