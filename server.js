@@ -22,7 +22,9 @@ const types = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
-  ".svg": "image/svg+xml"
+  ".svg": "image/svg+xml",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8"
 };
 
 async function readBookings() {
@@ -576,7 +578,9 @@ async function serveStatic(req, res) {
     "/": "/index.html",
     "/admin": "/admin.html",
     "/VARUNM26-2": "/VARUNM26-2.html",
-    "/varunm26-2": "/VARUNM26-2.html"
+    "/varunm26-2": "/VARUNM26-2.html",
+    "/regulamin": "/regulamin.html",
+    "/polityka-prywatnosci": "/polityka-prywatnosci.html"
   };
   const requested = cleanRoutes[url.pathname] || decodeURIComponent(url.pathname);
   const filePath = path.normalize(path.join(root, requested));
