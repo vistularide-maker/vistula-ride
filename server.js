@@ -388,7 +388,7 @@ function getMailFrom() {
 function reservationEmailHtml(booking) {
   const mapUrl = "https://www.google.com/maps/dir//Na+Wi%C5%9Blanej+Skarpie,+Widokowa+12,+87-125+Stajenczynki";
   return `
-    <div style="font-family:Arial,sans-serif;color:#071524;line-height:1.5">
+    <div style="font-family:Arial,sans-serif;color:#02111F;line-height:1.5">
       <h1 style="margin:0 0 16px">Potwierdzenie rezerwacji Vistula Ride</h1>
       <p>Dzień dobry ${escapeHtml(booking.customer.name)},</p>
       <p>Przyjęliśmy Twoją rezerwację roweru elektrycznego.</p>
@@ -400,7 +400,7 @@ function reservationEmailHtml(booking) {
         <tr><td style="padding:8px;border:1px solid #d8dde5"><strong>Kaucja zwrotna</strong></td><td style="padding:8px;border:1px solid #d8dde5">300 zł gotówką przy odbiorze</td></tr>
       </table>
       <p><strong>Odbiór:</strong><br>Na Wiślanej Skarpie, Widokowa 12, 87-125 Stajenczynki</p>
-      <p><a href="${mapUrl}" style="color:#9e670c;font-weight:bold">Wyznacz trasę w Google Maps</a></p>
+      <p><a href="${mapUrl}" style="color:#F47A00;font-weight:bold">Wyznacz trasę w Google Maps</a></p>
       <p>Do zobaczenia na trasie,<br>Vistula Ride</p>
     </div>
   `;
@@ -408,7 +408,7 @@ function reservationEmailHtml(booking) {
 
 function cancellationEmailHtml(booking) {
   return `
-    <div style="font-family:Arial,sans-serif;color:#071524;line-height:1.5">
+    <div style="font-family:Arial,sans-serif;color:#02111F;line-height:1.5">
       <h1 style="margin:0 0 16px">Anulowanie rezerwacji Vistula Ride</h1>
       <p>Dzień dobry ${escapeHtml(booking.customer.name)},</p>
       <p>Twoja rezerwacja roweru elektrycznego została anulowana.</p>

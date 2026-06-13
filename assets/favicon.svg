@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vistula Ride">
-  <rect width="64" height="64" rx="14" fill="#071524"/>
-  <path d="M14 31A18 18 0 0 1 50 31" fill="none" stroke="#f2b642" stroke-width="3.2" stroke-linecap="round"/>
+  <rect width="64" height="64" rx="14" fill="#02111F"/>
+  <path d="M14 31A18 18 0 0 1 50 31" fill="none" stroke="#F47A00" stroke-width="3.2" stroke-linecap="round"/>
   <path d="M19 42c5-4 10-4 15 0s10 4 15 0" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>
   <path d="M17 49c5-4 10-4 15 0s10 4 15 0" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>
   <circle cx="23" cy="34" r="7" fill="none" stroke="#fff" stroke-width="3.2"/>
   <circle cx="43" cy="34" r="7" fill="none" stroke="#fff" stroke-width="3.2"/>
   <path d="M23 34h8l6-11m-3 11-7-11h14m-10 0h-5m14 0 3 11M29 34l-3-11" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="32" cy="34" r="2.4" fill="#f2b642"/>
+  <circle cx="32" cy="34" r="2.4" fill="#F47A00"/>
 </svg>

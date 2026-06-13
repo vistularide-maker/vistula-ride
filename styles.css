@@ -1,13 +1,13 @@
 :root {
-  --ink: #071524;
-  --ink-2: #0c2133;
+  --ink: #02111F;
+  --ink-2: #0a2236;
   --muted: #647084;
   --line: #d8dde5;
   --paper: #f7f8fa;
   --white: #ffffff;
-  --gold: #d3911f;
-  --gold-2: #f2b642;
-  --gold-dark: #9e670c;
+  --gold: #F47A00;
+  --gold-2: #F47A00;
+  --gold-dark: #F47A00;
   --focus: #2b78c5;
   color-scheme: light;
 }
@@ -314,7 +314,7 @@ svg {
 .admin-payment {
   display: inline-flex;
   border-radius: 999px;
-  background: rgba(211, 145, 31, 0.16);
+  background: rgba(244, 122, 0, 0.16);
   color: var(--gold-dark);
   padding: 5px 9px;
   font-size: 0.82rem;
@@ -449,7 +449,6 @@ svg {
 .button-primary {
   background: linear-gradient(135deg, var(--gold-2), var(--gold-dark));
   color: var(--white);
-  box-shadow: 0 14px 30px rgba(126, 79, 5, 0.28);
 }
 
 .button-ghost {
@@ -482,8 +481,8 @@ svg {
 
 .hero-overlay {
   background:
-    linear-gradient(90deg, rgba(4, 17, 29, 0.94) 0%, rgba(4, 17, 29, 0.72) 36%, rgba(4, 17, 29, 0.2) 68%, rgba(4, 17, 29, 0.55) 100%),
-    linear-gradient(180deg, rgba(4, 17, 29, 0.74) 0%, rgba(4, 17, 29, 0.1) 48%, rgba(4, 17, 29, 0.68) 100%);
+    linear-gradient(90deg, rgba(2, 17, 31, 0.94) 0%, rgba(2, 17, 31, 0.72) 36%, rgba(2, 17, 31, 0.2) 68%, rgba(2, 17, 31, 0.55) 100%),
+    linear-gradient(180deg, rgba(2, 17, 31, 0.74) 0%, rgba(2, 17, 31, 0.1) 48%, rgba(2, 17, 31, 0.68) 100%);
 }
 
 .hero-content {
@@ -792,7 +791,7 @@ legend {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--white);
-  box-shadow: 0 12px 34px rgba(7, 21, 36, 0.08);
+  box-shadow: 0 12px 34px rgba(2, 17, 31, 0.08);
   text-align: center;
   cursor: pointer;
 }
@@ -818,7 +817,7 @@ legend {
 
 .package-option:has(input:checked) {
   border-color: var(--gold);
-  box-shadow: 0 14px 38px rgba(211, 145, 31, 0.2);
+  box-shadow: 0 14px 38px rgba(244, 122, 0, 0.2);
 }
 
 .badge {
@@ -886,7 +885,7 @@ a:focus-visible {
 .availability-message {
   margin: -2px 0 0;
   border-left: 4px solid var(--gold);
-  background: rgba(7, 21, 36, 0.05);
+  background: rgba(2, 17, 31, 0.05);
   color: var(--ink);
   padding: 12px 14px;
   font-weight: 800;
@@ -899,9 +898,9 @@ a:focus-visible {
 }
 
 .payment-note {
-  border: 1px solid rgba(211, 145, 31, 0.38);
+  border: 1px solid rgba(244, 122, 0, 0.38);
   border-radius: 8px;
-  background: rgba(242, 182, 66, 0.1);
+  background: rgba(244, 122, 0, 0.1);
   padding: 16px 18px;
 }
 
@@ -1016,8 +1015,8 @@ a:focus-visible {
 
 .product-page-hero::after {
   background:
-    linear-gradient(90deg, rgba(4, 17, 29, 0.92), rgba(4, 17, 29, 0.42) 58%, rgba(4, 17, 29, 0.16)),
-    linear-gradient(0deg, rgba(4, 17, 29, 0.8), rgba(4, 17, 29, 0.1) 42%);
+    linear-gradient(90deg, rgba(2, 17, 31, 0.92), rgba(2, 17, 31, 0.42) 58%, rgba(2, 17, 31, 0.16)),
+    linear-gradient(0deg, rgba(2, 17, 31, 0.8), rgba(2, 17, 31, 0.1) 42%);
 }
 
 .product-page-hero-content {
@@ -1055,7 +1054,7 @@ a:focus-visible {
   min-height: 92px;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 8px;
-  background: rgba(7, 21, 36, 0.42);
+  background: rgba(2, 17, 31, 0.42);
   padding: 16px;
 }
 
@@ -1210,9 +1209,9 @@ a:focus-visible {
   min-height: 390px;
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(13, 54, 87, 0.96), rgba(7, 21, 36, 1));
+    linear-gradient(135deg, rgba(10, 34, 54, 0.96), rgba(2, 17, 31, 1));
   padding: 42px;
-  box-shadow: 0 18px 44px rgba(7, 21, 36, 0.14);
+  box-shadow: 0 18px 44px rgba(2, 17, 31, 0.14);
 }
 
 .location-copy h2 {
@@ -1238,7 +1237,7 @@ a:focus-visible {
   min-height: 390px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: 0 18px 44px rgba(7, 21, 36, 0.12);
+  box-shadow: 0 18px 44px rgba(2, 17, 31, 0.12);
 }
 
 .location-map iframe[hidden] {
@@ -1256,7 +1255,7 @@ a:focus-visible {
   background: var(--white);
   color: var(--ink);
   padding: 34px;
-  box-shadow: 0 18px 44px rgba(7, 21, 36, 0.12);
+  box-shadow: 0 18px 44px rgba(2, 17, 31, 0.12);
 }
 
 .map-consent[hidden] {
@@ -1380,7 +1379,7 @@ a:focus-visible {
   border-radius: 8px;
   background: var(--white);
   color: var(--ink);
-  box-shadow: 0 20px 60px rgba(7, 21, 36, 0.2);
+  box-shadow: 0 20px 60px rgba(2, 17, 31, 0.2);
   padding: 20px;
   pointer-events: auto;
 }
@@ -1435,7 +1434,7 @@ a:focus-visible {
   z-index: 60;
   display: grid;
   place-items: center;
-  background: rgba(7, 21, 36, 0.58);
+  background: rgba(2, 17, 31, 0.58);
   padding: 20px;
 }
 
@@ -1445,7 +1444,7 @@ a:focus-visible {
   background: var(--white);
   color: var(--ink);
   padding: 26px;
-  box-shadow: 0 30px 70px rgba(7, 21, 36, 0.3);
+  box-shadow: 0 30px 70px rgba(2, 17, 31, 0.3);
 }
 
 .cookie-modal-panel h2 {
@@ -1608,7 +1607,7 @@ a:focus-visible {
   }
 
   .hero-overlay {
-    background: linear-gradient(90deg, rgba(4, 17, 29, 0.94), rgba(4, 17, 29, 0.68));
+    background: linear-gradient(90deg, rgba(2, 17, 31, 0.94), rgba(2, 17, 31, 0.68));
   }
 
   .hero-content {
