@@ -393,6 +393,10 @@ svg {
   height: auto;
 }
 
+.site-header .brand img {
+  width: clamp(96px, 9vw, 126px);
+}
+
 .site-footer .brand img {
   width: clamp(150px, 16vw, 196px);
 }
@@ -1580,6 +1584,10 @@ a:focus-visible {
 @media (max-width: 720px) {
   .brand img {
     width: 136px;
+  }
+
+  .site-header .brand img {
+    width: 104px;
   }
 
   .main-nav {
